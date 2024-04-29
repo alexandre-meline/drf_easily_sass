@@ -1,0 +1,44 @@
+# pypi
+dist
+*.egg-info
+*.egg
+
+# virtualenv
+venv
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+
+# Jupyter
+.ipynb_checkpoints
+
+# Django
+*.log
+*.pot
+*.pyc
+tasks
+test_auth
+
+firebase.json
+manage.py
+
+*.sqlite3
+
+# Local settings
+tools/
+app_test/
+
+# Docs mkdocs
+site/

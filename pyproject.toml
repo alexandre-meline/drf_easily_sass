@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "drf-easily-sass"
+version = "0.0.0"
+description = "This package is complete tools for sass building"
+authors = ["Alexandre Meline <alexandre.meline.dev@gmail.com>"]
+readme = "README.md"
+keywords = [
+    "Django",
+    "Firebase",
+    "Authentication",
+    "User Synchronization",
+    "DRF", 
+    "Python",
+    "User Management",
+    "Security",
+    "API",
+    "JSON Web Tokens",
+]
+homepage="https://github.com/alexandre-meline/drf_easily_sass/"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^5.0.4"
+djangorestframework = "^3.15.1"
+firebase-admin = "^6.5.0"
+stripe = "^9.3.0"
+drf-spectacular = "^0.27.2"
+pydantic = "^2.7.1"
+colorama = "^0.4.6"
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.5.19"
+python-dotenv = "^1.0.1"
+google-cloud-functions = "^1.16.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

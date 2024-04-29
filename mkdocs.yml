@@ -1,0 +1,24 @@
+site_name: Drf Easily Saas
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: light-blue
+  font:
+    text: Roboto
+    code: Roboto Mono
+  language: en
+  features:
+    - navigation.sidebar
+    - navigation.paging
+    - navigation.edit
+    - navigation.search
+    - navigation.prev_next
+    - navigation.toc
+    - navigation.scrollspy
+    - navigation.anchor_link
+    - navigation.breadcrumbs
+
+#  Others settings
+
+
