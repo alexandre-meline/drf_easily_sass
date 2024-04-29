@@ -18,7 +18,7 @@ Create your [Firebase](https://console.firebase.google.com/) database, then down
 **Install authentication app in your project**
 
 ```bash
-pip install drf-easily-auth
+pip install drf-easily-saas
 ```
 
 ```bash
