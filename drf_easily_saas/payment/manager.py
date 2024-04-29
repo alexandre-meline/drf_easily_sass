@@ -125,31 +125,24 @@ class StripeManager(PaymentManager):
         # Mets à jour le profile de l'utilisateur dans Firebase
         uid = session_['metadata']['uid']
         subscription_id = session_['subscription']
-        sessions_metadata = session_['metadata']
 
         # [Stripe] ajoute les metadata à l'abonnement de l'utilisateur dans Stripe
-        # Ajoute: uid, user_email
+        # Ajoute: uid
         subscription = self._add_subscribtion_meta(subscription_id, {'uid': uid})
 
         # [Firebase] Ajoute les custom claims au user dans Firebase
         # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
-        custom_claims = add_custom_claims(uid, 
-            {   
+        custom_claims = {   
                 'status': subscription['status'],
                 'subscription_id': subscription_id,
                 'plan_id': subscription['plan']['id'],
                 'customer_id': session_['customer']
             }
-        )
-        if custom_claims:
-            if self._add_subscribtion_db(uid, subscription):
-                print('Subscription added to the database')
-                return subscription
-            else:
-                print('Error adding subscription to the database')
-                return None
+        if self._add_subscribtion_in_state(uid=uid, claims=custom_claims, subscription=subscription):
+            print('Subscription added to the database')
+            return subscription
         else:
-            print('Claims not added to the user')
+            print('Error adding subscription to the database')
             return None
 
     def handle_checkout_session_expired(self, session):
@@ -178,24 +171,19 @@ class StripeManager(PaymentManager):
         uid = subscription['metadata']['uid']
         subscription_id = subscription['id']
 
-        custom_claims = add_custom_claims(uid, 
-            {   
+        custom_claims = {   
                 'status': subscription['status'],
                 'subscription_id': subscription_id,
                 'plan_id': subscription['plan']['id'],
                 'customer_id': subscription['customer']
             }
-        )
-        if custom_claims:
-            if self._add_subscribtion_db(uid, subscription):
-                print('Subscription added to the database')
-                return subscription
-            else:
-                print('Error adding subscription to the database')
-                return None
+        if self._add_subscribtion_in_state(uid=uid, claims=custom_claims, subscription=subscription):
+            print('Subscription added to the database and custom claims added to the user')
+            return subscription
         else:
-            print('Claims not added to the user')
+            print('Error adding subscription to the database')
             return None
+
     # -------------------------------------------- #
     # Private methods
     # -------------------------------------------- #
@@ -208,10 +196,11 @@ class StripeManager(PaymentManager):
             return subscription
         return None
     
-    def _add_subscribtion_db(self, uid: str,  subscription: stripe.Subscription) -> Union[Subscription, None]:
+    def _add_subscribtion_in_state(self, uid: str, claims: dict,  subscription: stripe.Subscription) -> Union[Subscription, None]:
         # [Django] Ajoute l'abonnement à la base de données
             user = User.objects.get(username=uid)
             try:
+                add_custom_claims(uid, claims)
                 sub_table = Subscription.objects.update_or_create(
                     user=user,
                     provider='STRIPE',
