@@ -39,6 +39,7 @@ manage.py
 # Local settings
 tools/
 app_test/
+update_package.sh
 
 # Docs mkdocs
 site/
