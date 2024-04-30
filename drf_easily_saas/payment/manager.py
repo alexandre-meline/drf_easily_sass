@@ -7,10 +7,10 @@ from drf_easily_saas.settings import AUTH_PROVIDER, PAYMENT_PROVIDER, STRIPE_CON
 # Drf Easily Saas exceptions
 from drf_easily_saas.exceptions.stripe import StripePaymentProcessingError
 from drf_easily_saas.schemas.stripe import StripeBaseSubscription
+from drf_easily_saas.schemas.claims import FirebaseClaimsPayment
 
 # User methods and classes
 from drf_easily_saas.models import User, Subscription
-from drf_easily_saas.auth.firebase.state_manager import add_custom_claims
 
 
 # Ici je vais créer une classe qui va gérer les paiements avec Stripe et LemonSqueezy, 
@@ -42,6 +42,7 @@ class StripeManager(PaymentManager):
         Create a checkout session with Stripe.
         """
         try:
+            # Validate the subscription schema for Stripe from define in settings.py in project
             subscription_schema_valid = StripeBaseSubscription(**subscription_schema)
             # Add user informations to metadata if not already present
             session = stripe.checkout.Session.create(**subscription_schema_valid.to_dict())
@@ -126,20 +127,24 @@ class StripeManager(PaymentManager):
         uid = session_['metadata']['uid']
         subscription_id = session_['subscription']
 
+        # [Stripe] Add uid in customer metadata
+        customer = self._add_customer_metadata(session_['customer'], {'uid': uid})
+
         # [Stripe] ajoute les metadata à l'abonnement de l'utilisateur dans Stripe
         # Ajoute: uid
         subscription = self._add_subscribtion_meta(subscription_id, {'uid': uid})
 
         # [Firebase] Ajoute les custom claims au user dans Firebase
         # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
-        custom_claims = {   
-                'status': subscription['status'],
-                'subscription_id': subscription_id,
-                'plan_id': subscription['plan']['id'],
-                'customer_id': session_['customer']
-            }
-        if self._add_subscribtion_in_state(uid=uid, claims=custom_claims, subscription=subscription):
-            print('Subscription added to the database')
+        custom_claims = FirebaseClaimsPayment(
+            status=subscription.status,
+            customer_id=customer.id,
+            subscription_id=subscription_id,
+            plan_id=subscription.plan.id,
+            uid=uid
+        )
+
+        if custom_claims.update_state_token(custom_claims, subscription):
             return subscription
         else:
             print('Error adding subscription to the database')
@@ -170,24 +175,27 @@ class StripeManager(PaymentManager):
         # Mets à jour le profile de l'utilisateur dans Firebase
         uid = subscription['metadata']['uid']
         subscription_id = subscription['id']
+        
+        # [Firebase] Ajoute les custom claims au user dans Firebase
+        # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
+        custom_claims = FirebaseClaimsPayment(
+            status=subscription.status,
+            customer_id=subscription.customer,
+            subscription_id=subscription_id,
+            plan_id=subscription.plan.id,
+            uid=uid
+        )
 
-        custom_claims = {   
-                'status': subscription['status'],
-                'subscription_id': subscription_id,
-                'plan_id': subscription['plan']['id'],
-                'customer_id': subscription['customer']
-            }
-        if self._add_subscribtion_in_state(uid=uid, claims=custom_claims, subscription=subscription):
-            print('Subscription added to the database and custom claims added to the user')
+        if custom_claims.update_state_token(custom_claims, subscription):
             return subscription
         else:
-            print('Error adding subscription to the database')
+            print('Error adding subscription to the state')
             return None
 
     # -------------------------------------------- #
     # Private methods
     # -------------------------------------------- #
-
+    # _ Subscription methods
     def _add_subscribtion_meta(self, subscription_id: int , metadata: dict) -> Union[stripe.Subscription, None]:
         subscription = stripe.Subscription.retrieve(subscription_id)
         subscription.metadata = metadata
@@ -196,27 +204,23 @@ class StripeManager(PaymentManager):
             return subscription
         return None
     
-    def _add_subscribtion_in_state(self, uid: str, claims: dict,  subscription: stripe.Subscription) -> Union[Subscription, None]:
-        # [Django] Ajoute l'abonnement à la base de données
-            user = User.objects.get(username=uid)
-            try:
-                add_custom_claims(uid, claims)
-                sub_table = Subscription.objects.update_or_create(
-                    user=user,
-                    provider='STRIPE',
-                    defaults={
-                        'subscription_id': subscription.id,
-                        'status': subscription.status,
-                        'plan_id': subscription.plan.id,
-                        'customer_id': subscription.customer,
-                    }
-                )
-                if sub_table:
-                    return sub_table
-                return None
-            except Exception as e:
-                print(e)
-                return None
-            
+    def _get_subscribtion_meta(self, subscription_id: int) -> Union[stripe.Subscription, None]:
+        subscription = stripe.Subscription.retrieve(subscription_id)
+        return subscription.metadata
+    
+    # _ Customer methods
+    def _add_customer_metadata(self, customer_id: int, metadata: dict) -> Union[stripe.Customer, None]:
+        customer = stripe.Customer.retrieve(customer_id)
+        customer.metadata = metadata
+        customer.save()
+        if customer.metadata == metadata:
+            return customer
+        return None
+    
+    def _get_customer_metadata(self, customer_id: int) -> Union[stripe.Customer, None]:
+        customer = stripe.Customer.retrieve(customer_id)
+        return customer.metadata
+
+    # _ Utils
     def _normalize_event_type(self, event_type: str) -> str:
         return event_type.replace('.', '_')

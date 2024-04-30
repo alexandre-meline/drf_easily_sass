@@ -26,7 +26,6 @@ frontend_url = EASILY_CONFIG.frontend_url
 # -------------------------------------------- #
 class CheckoutView(APIView):
     serializer_class = CheckoutSerializer
-    permission_classes = []
     stripe_manager = StripeManager()
 
     @extend_schema(
