@@ -51,7 +51,7 @@ class FirebaseAuthentication(authentication.BaseAuthentication):
                 email_verified=email_verified,
                 sign_in_provider=provider
             )
-        return user or None, firebase_user or None
+        return user, None
 
 # ---------------------------------------- FIREBASE UTILS ---------------------------------------- #
 
