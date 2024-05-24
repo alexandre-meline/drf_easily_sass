@@ -31,43 +31,41 @@ class FirebaseUserInformations(BaseModel):
         unique_together = ('user', 'sign_in_provider')
 
 
-# --------------------------- #
-# Stripe models
-# --------------------------- #
+# models.py
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 
 class StripeCustomerModel(models.Model):
     id = models.CharField(max_length=255, primary_key=True, editable=False, verbose_name=_("ID"))
+    # user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='stripe_customer', verbose_name=_("User"))
     address = models.JSONField(null=True, blank=True, verbose_name=_("Address"))
     description = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Description"))
-    email = models.EmailField(null=True, blank=True, verbose_name=_("Email"))
+    email = models.EmailField(verbose_name=_("Email"))
     metadata = models.JSONField(default=dict, blank=True, verbose_name=_("Metadata"))
     name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Name"))
     phone = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Phone"))
     shipping = models.JSONField(null=True, blank=True, verbose_name=_("Shipping"))
-    metadata = models.JSONField(default=dict, blank=True, verbose_name=_("Metadata"))
-    # ---------------------------
 
     class Meta:
         verbose_name = _("Stripe Customer")
         verbose_name_plural = _("Stripe Customers")
     
     def __str__(self):
-        return self.name
+        return f"{self.name} - {self.id}"
     
     def get_subscriptions(self):
-        return StripeSubscriptionModel.objects.filter(customer=self.id)
+        return StripeSubscriptionModel.objects.filter(customer=self)
     
     def get_plans(self):
         plans = []
         for subscription in self.get_subscriptions():
-            plans.append(subscription.get_plans())
+            plans.extend(subscription.get_plans())
         return plans
     
     def get_invoices(self):
-        return StripeInvoiceModel.objects.filter(customer=self.id)
+        return StripeInvoiceModel.objects.filter(customer=self)
 
 
 class StripeProductModel(models.Model):
@@ -102,16 +100,16 @@ class StripeProductModel(models.Model):
         return StripePlanModel.objects.get(id=self.default_price)
     
     def get_plans(self):
-        return StripePlanModel.objects.filter(product=self.id)
+        return StripePlanModel.objects.filter(product=self)
     
     def get_active_plans(self):
-        return StripePlanModel.objects.filter(product=self.id, active=True)
+        return StripePlanModel.objects.filter(product=self, active=True)
     
     def get_inactive_plans(self):
-        return StripePlanModel.objects.filter(product=self.id, active=False)
+        return StripePlanModel.objects.filter(product=self, active=False)
     
     def get_subscriptions(self):
-        return StripeSubscriptionModel.objects.filter(product=self.id)
+        return StripeSubscriptionModel.objects.filter(items__data__plan__product=self)
 
 
 class StripePlanModel(models.Model):
@@ -146,25 +144,25 @@ class StripePlanModel(models.Model):
     livemode = models.BooleanField(default=False, verbose_name=_("Live Mode"))
     metadata = models.JSONField(null=True, blank=True, verbose_name=_("Metadata"))
     nickname = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Nickname"))
-    product = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Product ID"))
+    product = models.ForeignKey(StripeProductModel, on_delete=models.CASCADE, related_name='plans', verbose_name=_("Product"))
     tiers_mode = models.CharField(max_length=20, null=True, blank=True, verbose_name=_("Tiers Mode"))
     transform_usage = models.JSONField(null=True, blank=True, verbose_name=_("Transform Usage"))
     trial_period_days = models.IntegerField(null=True, blank=True, verbose_name=_("Trial Period Days"))
     usage_type = models.CharField(max_length=10, choices=UsageType.choices, default=UsageType.LICENSED, verbose_name=_("Usage Type"))
 
-    def get_product(self):
-        return StripeProductModel.objects.get(id=self.product)
-    
-    def get_subscriptions(self):
-        return StripeSubscriptionModel.objects.filter(items__data__plan__id=self.id)
-
-    def __str__(self):
-        return self.id
-    
     class Meta:
         verbose_name = _("Stripe Plan")
         verbose_name_plural = _("Stripe Plans")
         ordering = ['-created']
+
+    def __str__(self):
+        return self.id
+    
+    def get_product(self):
+        return self.product
+    
+    def get_subscriptions(self):
+        return StripeSubscriptionModel.objects.filter(items__data__plan__id=self.id)
 
 
 class StripeSubscriptionModel(models.Model):
@@ -183,7 +181,7 @@ class StripeSubscriptionModel(models.Model):
     currency = models.CharField(max_length=3, verbose_name=_("Currency"))
     current_period_end = models.DateTimeField(verbose_name=_("Current Period End"))
     current_period_start = models.DateTimeField(_("Current Period Start"))
-    customer = models.CharField(max_length=255, verbose_name=_("Customer ID"))
+    customer = models.ForeignKey(StripeCustomerModel, on_delete=models.CASCADE, related_name='subscriptions', verbose_name=_("Customer"))
     default_payment_method = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Default Payment Method"))
     description = models.TextField(null=True, blank=True, verbose_name=_("Description"))
     items = models.JSONField(verbose_name=_("Items"))
@@ -192,7 +190,6 @@ class StripeSubscriptionModel(models.Model):
     pending_setup_intent = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Pending Setup Intent"))
     pending_update = models.JSONField(null=True, blank=True, verbose_name=_("Pending Update"))
     status = models.CharField(max_length=50, choices=Status.choices, verbose_name=_("Status"))
-    # ---------------------------
 
     class Meta:
         verbose_name = _("Stripe Subscription")
@@ -203,11 +200,10 @@ class StripeSubscriptionModel(models.Model):
         return self.id
 
     def get_customer(self):
-        return User.objects.get(id=self.customer)
+        return self.customer
     
     def get_plans(self):
-        print(self.items['data'].items())
-        return StripePlanModel.objects.filter(id__in=[k['plan']['id'] for k, v in self.items['data'].items()])
+        return StripePlanModel.objects.filter(id__in=[item['plan']['id'] for item in self.items['data']])
     
     def get_latest_invoice(self):
         return StripeInvoiceModel.objects.get(id=self.latest_invoice)
@@ -223,7 +219,7 @@ class StripeSubscriptionModel(models.Model):
 
     def get_metadata(self):
         return self.metadata
-    
+
 
 class StripeInvoiceModel(models.Model):
     class Status(models.TextChoices):
@@ -238,14 +234,13 @@ class StripeInvoiceModel(models.Model):
     currency = models.CharField(max_length=3, verbose_name=_("Currency"))
     current_period_end = models.DateTimeField(verbose_name=_("Current Period End"))
     current_period_start = models.DateTimeField(verbose_name=_("Current Period Start"))
-    customer = models.CharField(max_length=255, verbose_name=_("Customer ID"))
+    customer = models.ForeignKey(StripeCustomerModel, on_delete=models.CASCADE, related_name='invoices', verbose_name=_("Customer"))
     description = models.TextField(null=True, blank=True, verbose_name=_("Description"))
     lines = models.JSONField(verbose_name=_("Lines"))
     metadata = models.JSONField(default=dict, blank=True, verbose_name=_("Metadata"))
     status = models.CharField(max_length=50, choices=Status.choices, verbose_name=_("Status"))
     hosted_invoice_url = models.URLField(null=True, blank=True, verbose_name=_("Hosted Invoice URL"))
-    subscription = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Subscription ID"))
-    # ---------------------------
+    subscription = models.ForeignKey(StripeSubscriptionModel, null=True, blank=True, on_delete=models.SET_NULL, related_name='invoices', verbose_name=_("Subscription"))
 
     class Meta:
         verbose_name = _("Stripe Invoice")
@@ -256,7 +251,7 @@ class StripeInvoiceModel(models.Model):
         return self.id
 
     def get_customer(self):
-        return StripeCustomerModel.objects.get(id=self.customer)
+        return self.customer
     
     def get_lines(self):
         return self.lines
@@ -268,8 +263,8 @@ class StripeInvoiceModel(models.Model):
         return self.metadata
     
     def get_subscription(self):
-        return Subscription.objects.get(id=self.subscription)
-    
+        return self.subscription
+
 
 class StripeSetupIntentModel(models.Model):
     class Status(models.TextChoices):
@@ -291,7 +286,6 @@ class StripeSetupIntentModel(models.Model):
     created = models.DateTimeField(verbose_name=_("Created"))
     livemode = models.BooleanField(default=False, verbose_name=_("Live Mode"))
     metadata = models.JSONField(default=dict, blank=True, verbose_name=_("Metadata"))
-    # ---------------------------
 
     class Meta:
         verbose_name = _("Stripe Setup Intent")
