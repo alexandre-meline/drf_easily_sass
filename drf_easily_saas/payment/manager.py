@@ -10,7 +10,7 @@ from drf_easily_saas.schemas.stripe import StripeBaseSubscription
 from drf_easily_saas.schemas.claims import FirebaseClaimsPayment
 
 # User methods and classes
-from drf_easily_saas.models import User, Subscription
+from drf_easily_saas.models import User, StripeSubscriptionModel
 
 
 # Ici je vais créer une classe qui va gérer les paiements avec Stripe et LemonSqueezy, 
@@ -30,7 +30,6 @@ class StripeManager(PaymentManager):
         self.public_key = self.config.public_key
 
         # Initialize Stripe
-        print(self.config.secret_key)
         stripe.api_key = self.config.secret_key
         super().__init__()
 
@@ -126,7 +125,7 @@ class StripeManager(PaymentManager):
         # Traitez la réussite du paiement ici
         return True
 
-    def handle_checkout_session_completed(self, event_data) -> Union[Subscription, None]:
+    def handle_checkout_session_completed(self, event_data) -> Union[StripeSubscriptionModel, None]:
         session_ = event_data
         # Mets à jour le profile de l'utilisateur dans Firebase
         uid = session_['metadata']['uid']
@@ -139,20 +138,27 @@ class StripeManager(PaymentManager):
         # Ajoute: uid
         subscription = self._add_subscribtion_meta(subscription_id, {'uid': uid})
 
-        # [Firebase] Ajoute les custom claims au user dans Firebase
-        # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
-        custom_claims = FirebaseClaimsPayment(
-            status=subscription.status,
-            customer_id=customer.id,
-            subscription_id=subscription_id,
-            plan_id=subscription.plan.id,
-            uid=uid
-        )
-
-        if custom_claims.update_state_token(custom_claims, subscription):
-            return subscription
+        # Selon la configuration mise en place pour le provider d'authentification
+        # Ajoute les claims au bon provider
+        if self.auth_provider == "cognito":
+            pass
+        elif self.auth_provider == "firebase":
+            # [Firebase] Ajoute les custom claims au user dans Firebase
+            # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
+            custom_claims = FirebaseClaimsPayment(
+                status=subscription.status,
+                customer_id=customer.id,
+                subscription_id=subscription_id,
+                plan_id=subscription.plan.id,
+                uid=uid
+            )
+            if custom_claims.update_state_token(custom_claims, subscription):
+                return subscription
+            else:
+                print('Error adding subscription to the database')
+                return None
         else:
-            print('Error adding subscription to the database')
+            print("Auth provider not matching")
             return None
 
     def handle_checkout_session_expired(self, session):
@@ -180,21 +186,29 @@ class StripeManager(PaymentManager):
         # Mets à jour le profile de l'utilisateur dans Firebase
         uid = subscription['metadata']['uid']
         subscription_id = subscription['id']
-        
-        # [Firebase] Ajoute les custom claims au user dans Firebase
-        # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
-        custom_claims = FirebaseClaimsPayment(
-            status=subscription.status,
-            customer_id=subscription.customer,
-            subscription_id=subscription_id,
-            plan_id=subscription.plan.id,
-            uid=uid
-        )
 
-        if custom_claims.update_state_token(custom_claims, subscription):
-            return subscription
+        # Selon la configuration mise en place pour le provider d'authentification
+        # Ajoute les claims au bon provider
+        if self.auth_provider == "cognito":
+            pass
+        elif self.auth_provider == "firebase":
+            # [Firebase] Ajoute les custom claims au user dans Firebase
+            # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
+            custom_claims = FirebaseClaimsPayment(
+                status=subscription.status,
+                customer_id=subscription.customer,
+                subscription_id=subscription_id,
+                plan_id=subscription.plan.id,
+                uid=uid
+            )
+
+            if custom_claims.update_state_token(custom_claims, subscription):
+                return subscription
+            else:
+                print('Error adding subscription to the state')
+                return None
         else:
-            print('Error adding subscription to the state')
+            print("Auth provider not matching")
             return None
 
     # -------------------------------------------- #

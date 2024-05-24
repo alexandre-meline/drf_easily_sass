@@ -6,7 +6,6 @@ from rest_framework.response import Response
 # From package
 from drf_easily_saas.utils.urls import concat_urls
 from drf_easily_saas.settings import EASILY_CONFIG, STRIPE_CONFIG, STRIPE_SUBSCRIPTION_CONFIG
-from drf_easily_saas.payment.serializers import SubscriptionSerializer
 from drf_easily_saas.payment.stripe.serializers import CheckoutSerializer, CheckoutSessionSerializer
 from drf_easily_saas.exceptions.stripe import StripePaymentProcessingError
 from drf_easily_saas.payment.manager import StripeManager
