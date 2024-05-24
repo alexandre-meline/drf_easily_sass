@@ -1,6 +1,3 @@
-import stripe
-
-# Django
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.views import APIView
@@ -14,12 +11,7 @@ from drf_easily_saas.payment.stripe.serializers import CheckoutSerializer, Check
 from drf_easily_saas.exceptions.stripe import StripePaymentProcessingError
 from drf_easily_saas.payment.manager import StripeManager
 
-
-# -------------------------------------------- #
-stripe.api_key = STRIPE_CONFIG.secret_key
 frontend_url = EASILY_CONFIG.frontend_url
-
-# -------------------------------------------- #
 
 # -------------------------------------------- #
 # Checkout

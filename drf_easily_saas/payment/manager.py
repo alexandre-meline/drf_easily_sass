@@ -2,7 +2,7 @@ import stripe
 import json
 from typing import Union, List, Dict, Any
 # Drf Easily Saas
-from drf_easily_saas.settings import AUTH_PROVIDER, PAYMENT_PROVIDER, STRIPE_CONFIG, STRIPE_SUBSCRIPTION_CONFIG, FRONTEND_URL
+from drf_easily_saas.settings import AUTH_PROVIDER, PAYMENT_PROVIDER, STRIPE_CONFIG, EASILY_CONFIG, FRONTEND_URL
 
 # Drf Easily Saas exceptions
 from drf_easily_saas.exceptions.stripe import StripePaymentProcessingError
@@ -30,6 +30,7 @@ class StripeManager(PaymentManager):
         self.public_key = self.config.public_key
 
         # Initialize Stripe
+        print(self.config.secret_key)
         stripe.api_key = self.config.secret_key
         super().__init__()
 
@@ -44,10 +45,14 @@ class StripeManager(PaymentManager):
         try:
             # Validate the subscription schema for Stripe from define in settings.py in project
             subscription_schema_valid = StripeBaseSubscription(**subscription_schema)
+            print(subscription_schema_valid.to_dict())
             # Add user informations to metadata if not already present
+            # BUG: You did not provide an API key. You need to provide your API key in the Authorization header,
             session = stripe.checkout.Session.create(**subscription_schema_valid.to_dict())
         except stripe.error.StripeError as e:
+            print(e)
             raise StripePaymentProcessingError(str(e))
+        print(session)
         return session
         
     # -------------------------------------------- #

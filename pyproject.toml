@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "drf_easily_saas"
-version = "0.0.3"
+version = "0.0.4"
 description = "This package is complete tools for sass building"
 authors = ["Alexandre Meline <alexandre.meline.dev@gmail.com>"]
 readme = "README.md"
