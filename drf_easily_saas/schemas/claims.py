@@ -12,7 +12,7 @@ from drf_easily_saas.schemas.constants import STRIPE_SUBSCRIPTION_STATUS_TYPES
 from drf_easily_saas.exceptions.base import ValidationError
 from drf_easily_saas.exceptions.config import InvalidConfigurationError
 # _Models
-from drf_easily_saas.models import Subscription
+# from drf_easily_saas.models import Subscription
 
 
 class ClaimsPayment(BaseModel):
@@ -112,17 +112,17 @@ class FirebaseClaimsPayment(ClaimsPayment):
             user = User.objects.get(username=cls.uid)
 
             # Add or update the subscription to the database
-            sub_table = Subscription.objects.update_or_create(
-                user=user,
-                provider='STRIPE',
-                defaults={
-                    'subscription_id': subscription.id,
-                    'status': subscription.status,
-                    'plan_id': subscription.plan.id,
-                    'customer_id': subscription.customer,
-                }
-            )
-            if sub_table:
-                print(f'Subscription added to the database and custom claims added to the user')
-                return sub_table
+            # sub_table = Subscription.objects.update_or_create(
+            #     user=user,
+            #     provider='STRIPE',
+            #     defaults={
+            #         'subscription_id': subscription.id,
+            #         'status': subscription.status,
+            #         'plan_id': subscription.plan.id,
+            #         'customer_id': subscription.customer,
+            #     }
+            # )
+            # if sub_table:
+            #     print(f'Subscription added to the database and custom claims added to the user')
+            #     return sub_table
         return None
