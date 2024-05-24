@@ -203,7 +203,10 @@ class StripeSubscriptionModel(models.Model):
         return self.customer
     
     def get_plans(self):
-        return StripePlanModel.objects.filter(id__in=[item['plan']['id'] for item in self.items['data']])
+        plans = []
+        for item in self.items:
+            plans.append(StripePlanModel.objects.get(id=item['plan']['id']))
+        return plans
     
     def get_latest_invoice(self):
         return StripeInvoiceModel.objects.get(id=self.latest_invoice)
