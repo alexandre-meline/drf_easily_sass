@@ -8,7 +8,6 @@ from drf_easily_saas.utils.db import (
     check_table_exists, 
     check_table_empty
     )
-from drf_easily_saas.auth.supabase.protect import import_users
 
 
 # -------------------------------------------- #
@@ -70,6 +69,8 @@ class SupabaseConfig(BaseModel):
         if v:
             try:
                 if check_table_exists("drf_easily_saas_supabaseuserinformations") and check_table_empty("drf_easily_saas_supabaseuserinformations"):
+                    # Import at runtime to avoid circular imports
+                    from drf_easily_saas.auth.supabase.protect import import_users
                     import_users()
             except Exception as e:
                 raise InvalidSupabaseConfigurationError(f"Error importing users from Supabase: {str(e)}")
@@ -82,6 +83,8 @@ class SupabaseConfig(BaseModel):
         if v:
             try:
                 if check_table_exists("drf_easily_saas_supabaseuserinformations") and not check_table_empty("drf_easily_saas_supabaseuserinformations"):
+                    # Import at runtime to avoid circular imports
+                    from drf_easily_saas.auth.supabase.protect import import_users
                     import_users()
                 elif not check_table_exists("drf_easily_saas_supabaseuserinformations"):
                     return v

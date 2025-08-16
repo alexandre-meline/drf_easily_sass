@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Union
 from firebase_admin import auth
 
 # Django
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
 
 
 # From package
@@ -109,6 +109,7 @@ class FirebaseClaimsPayment(ClaimsPayment):
             auth.revoke_refresh_tokens(cls.uid)
 
              # Get the user from the database with the uid
+            from django.contrib.auth.models import User
             user = User.objects.get(username=cls.uid)
 
             # Add or update the subscription to the database
@@ -191,6 +192,7 @@ class SupabaseClaimsPayment(ClaimsPayment):
                 print('Custom claims added to the user in supabase')
                 
                 # Get the user from the database with the uid
+                from django.contrib.auth.models import User
                 user = User.objects.get(username=cls.uid)
 
                 # Add or update the subscription to the database

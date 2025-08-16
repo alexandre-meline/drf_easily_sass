@@ -11,7 +11,6 @@ from drf_easily_saas.utils.db import (
     check_table_exists, 
     check_table_empty
     )
-from drf_easily_saas.auth.firebase.protect import import_users
 
 
 # -------------------------------------------- #
@@ -69,6 +68,8 @@ class FirebaseConfig(BaseModel):
         if v:
             try:
                 if check_table_exists("drf_easily_saas_firebaseuserinformations") and check_table_empty("drf_easily_saas_firebaseuserinformations"):
+                    # Import at runtime to avoid circular imports
+                    from drf_easily_saas.auth.firebase.protect import import_users
                     import_users()
             except Exception as e:
                 raise InvalidFirebaseConfigurationError(f"Error importing users from Firebase: {str(e)}")
@@ -81,6 +82,8 @@ class FirebaseConfig(BaseModel):
         if v:
             try:
                 if check_table_exists("drf_easily_saas_firebaseuserinformations") and not check_table_empty("drf_easily_saas_firebaseuserinformations"):
+                    # Import at runtime to avoid circular imports
+                    from drf_easily_saas.auth.firebase.protect import import_users
                     import_users()
                 elif not check_table_exists("drf_easily_saas_firebaseuserinformations"):
                     return v
