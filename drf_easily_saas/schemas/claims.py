@@ -126,3 +126,90 @@ class FirebaseClaimsPayment(ClaimsPayment):
             #     print(f'Subscription added to the database and custom claims added to the user')
             #     return sub_table
         return None
+
+
+class SupabaseClaimsPayment(ClaimsPayment):
+    """
+    This class is used to validate the claims.
+
+    On this class, we validate the claims.
+
+    Args:
+    - status (str): Status of the user
+    - customer_id (str): Customer ID
+    - subscription_id (str): Subscription ID
+    - plan_id (str): Plan ID
+    - uid (str): User ID
+
+    Returns:
+    - status (str): Status of the user
+    - customer_id (str): Customer ID
+    - subscription_id (str): Subscription ID
+    - plan_id (str): Plan ID
+    """
+    uid: str
+
+    @field_validator('uid')
+    def validate_uid(cls, v):
+        if not v:
+            raise ValidationError("UID cannot be empty")
+        return v
+    
+    def update_state_token(cls, claims: ClaimsPayment, subscription: stripe.Subscription) -> Union[dict, None]:
+        """
+        Add custom claims to a Supabase user via user metadata.
+        """
+        # Validate claims
+        if not claims:
+            return None
+            
+        # Get supabase config from Django settings
+        from django.conf import settings as dj_settings
+        supabase_config = dj_settings.EASILY.get('supabase_config', {})
+        url = supabase_config.get('url')
+        service_role_key = supabase_config.get('service_role_key')
+        
+        if not url or not service_role_key:
+            print('Supabase configuration not found')
+            return None
+            
+        from supabase import create_client
+        # Create supabase client with service role key for admin operations
+        supabase = create_client(url, service_role_key)
+        
+        try:
+            # Update user metadata with subscription claims
+            user_metadata = claims.dict()
+            response = supabase.auth.admin.update_user_by_id(
+                cls.uid,
+                {
+                    "user_metadata": user_metadata
+                }
+            )
+            
+            if response.user:
+                print('Custom claims added to the user in supabase')
+                
+                # Get the user from the database with the uid
+                user = User.objects.get(username=cls.uid)
+
+                # Add or update the subscription to the database
+                # sub_table = Subscription.objects.update_or_create(
+                #     user=user,
+                #     provider='STRIPE',
+                #     defaults={
+                #         'subscription_id': subscription.id,
+                #         'status': subscription.status,
+                #         'plan_id': subscription.plan.id,
+                #         'customer_id': subscription.customer,
+                #     }
+                # )
+                # if sub_table:
+                #     print(f'Subscription added to the database and custom claims added to the user')
+                #     return sub_table
+                return response.user
+        except Exception as e:
+            print(f'Error adding custom claims to Supabase user: {str(e)}')
+            return None
+            
+        return None

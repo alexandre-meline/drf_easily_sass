@@ -12,6 +12,7 @@ from drf_easily_saas.schemas.constants import (
     )
 from drf_easily_saas.schemas.stripe import StripeConfig
 from drf_easily_saas.schemas.firebase import FirebaseConfig
+from drf_easily_saas.schemas.supabase import SupabaseConfig
 # Exceptions
 from drf_easily_saas.exceptions.config import InvalidConfigurationError
 
@@ -25,6 +26,7 @@ class EasilyConfig(BaseModel):
     payment_provider: str
     frontend_url: HttpUrl
     firebase_config: FirebaseConfig = None
+    supabase_config: SupabaseConfig = None
     stripe_config: StripeConfig = None
     
     @field_validator('auth_provider')
@@ -36,6 +38,10 @@ class EasilyConfig(BaseModel):
             # Check if config is provided
             if "firebase_config" not in django_settings.EASILY:
                 raise InvalidConfigurationError("Firebase config is required")
+        elif v == "supabase":
+            # Check if config is provided
+            if "supabase_config" not in django_settings.EASILY:
+                raise InvalidConfigurationError("Supabase config is required")
         return v
      
     @field_validator('payment_provider')

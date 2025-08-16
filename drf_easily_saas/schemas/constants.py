@@ -1,7 +1,7 @@
 # --------------------------------------------- #
 # Auth provider configuration
 # --------------------------------------------- #
-AUTH_VALID_PROVIDER=['firebase', 'keycloak', 'cognito', 'auth0']
+AUTH_VALID_PROVIDER=['firebase', 'supabase', 'keycloak', 'cognito', 'auth0']
 
 
 # --------------------------------------------- #
