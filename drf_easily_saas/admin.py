@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import FirebaseUserInformations
+from .models import FirebaseUserInformations, SupabaseUserInformations
 # Stripe
 from .models import (
     StripeCustomerModel,
@@ -13,6 +13,10 @@ from .models import (
 # Firebase
 # ------------------------------------------------
 admin.site.register(FirebaseUserInformations)
+
+# Supabase
+# ------------------------------------------------
+admin.site.register(SupabaseUserInformations)
 
 # Stripe
 # ------------------------------------------------

@@ -7,7 +7,7 @@ from drf_easily_saas.settings import AUTH_PROVIDER, PAYMENT_PROVIDER, STRIPE_CON
 # Drf Easily Saas exceptions
 from drf_easily_saas.exceptions.stripe import StripePaymentProcessingError
 from drf_easily_saas.schemas.stripe import StripeBaseSubscription
-from drf_easily_saas.schemas.claims import FirebaseClaimsPayment
+from drf_easily_saas.schemas.claims import FirebaseClaimsPayment, SupabaseClaimsPayment
 
 # User methods and classes
 from drf_easily_saas.models import User, StripeSubscriptionModel
@@ -157,6 +157,20 @@ class StripeManager(PaymentManager):
             else:
                 print('Error adding subscription to the database')
                 return None
+        elif self.auth_provider == "supabase":
+            # [Supabase] Ajoute les custom claims au user dans Supabase via user metadata
+            custom_claims = SupabaseClaimsPayment(
+                status=subscription.status,
+                customer_id=customer.id,
+                subscription_id=subscription_id,
+                plan_id=subscription.plan.id,
+                uid=uid
+            )
+            if custom_claims.update_state_token(custom_claims, subscription):
+                return subscription
+            else:
+                print('Error adding subscription to the database')
+                return None
         else:
             print("Auth provider not matching")
             return None
@@ -195,6 +209,21 @@ class StripeManager(PaymentManager):
             # [Firebase] Ajoute les custom claims au user dans Firebase
             # Cela aura pour effet de mettre à jour le token de l'utilisateur et de le deconnecter de toutes ses sessions
             custom_claims = FirebaseClaimsPayment(
+                status=subscription.status,
+                customer_id=subscription.customer,
+                subscription_id=subscription_id,
+                plan_id=subscription.plan.id,
+                uid=uid
+            )
+
+            if custom_claims.update_state_token(custom_claims, subscription):
+                return subscription
+            else:
+                print('Error adding subscription to the state')
+                return None
+        elif self.auth_provider == "supabase":
+            # [Supabase] Ajoute les custom claims au user dans Supabase via user metadata
+            custom_claims = SupabaseClaimsPayment(
                 status=subscription.status,
                 customer_id=subscription.customer,
                 subscription_id=subscription_id,

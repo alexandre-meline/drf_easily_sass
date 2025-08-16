@@ -30,6 +30,21 @@ class FirebaseUserInformations(BaseModel):
         verbose_name_plural = "Firebase User Informations"
         unique_together = ('user', 'sign_in_provider')
 
+# _ Supabase Admin
+class SupabaseUserInformations(BaseModel):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    email_verified = models.BooleanField() # Email verified
+    sign_in_provider = models.CharField(max_length=255) # Sign in provider
+    # ---------------------------
+
+    def __str__(self):
+        return f"{self.user.username} - {self.email_verified} - {self.sign_in_provider}"
+    
+    class Meta:
+        verbose_name = "Supabase User Informations"
+        verbose_name_plural = "Supabase User Informations"
+        unique_together = ('user', 'sign_in_provider')
+
 
 # models.py
 
